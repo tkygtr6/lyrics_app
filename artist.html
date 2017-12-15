@@ -1,0 +1,683 @@
+<html lang="en"><head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>artist detail</title>
+    <script type="text/javascript" src="./lib/d3.js"></script>
+    <style type="text/css">
+    body{
+        margin: 40px 30px;
+    }
+    #container{
+    }
+    .bar {
+      fill: steelblue;
+    }
+    .bar:hover {
+      fill: brown;
+    }
+    .axis--x path {
+      display: none;
+    }
+    #bubble circle{
+      cursor: pointer;
+    }
+    #bubble tspan{
+      cursor: pointer;
+    }
+    #return_top{
+      cursor: pointer;
+    }
+    #rank text.aa{
+        cursor: pointer;
+    }
+    #bar rect{
+      cursor: pointer;
+    }
+    #artist_name text#name{
+      cursor: pointer;
+    }
+    div #lyric_title{
+      margin-bottom: 10px;
+    }
+    p#cd{
+      margin: 0px;
+      padding: 0px;
+    }
+    #artist_name_top{
+        font-size: 50px;
+        cursor: pointer;
+        margin: 0px;
+        margin-left: 30px;
+    }
+    #return_top{
+        width: 200px;
+        height: 50px;
+        margin-left: 30px;
+        font-size: 25px;
+        border-radius: 6px;
+    }
+    #search_form{
+        margin-left: 40px;
+    }
+    #top_container{
+        display: flex;
+    }
+    #main_container{
+        display: flex;
+    }
+    .artist-btn{
+        text-decoration: none;
+        border-bottom: solid 4px #627295;
+        color: black;
+        display: block;
+        width: 160px;
+        height: 20px;
+        font-size: 15px;
+        background-color: pink;
+        padding: 10px 24px;
+        margin: 6px;
+        text-align: center;
+        border-radius: 20px;
+        opacity: 0.8;
+    }
+    .artist-btn:active{
+        border-bottom: none;
+        position: relative;
+        top: 1.5px;
+    }
+    #rank_container{
+        width: 220px;
+        height: 350px;
+        border-radius: 12px;
+        margin-top: 90px;
+        margin-left: 50px;
+    }
+    #rank_title{
+        font-size: 15px;
+        text-align: center;
+    }
+    #bubble_container{
+        width: 600px;
+    }
+    #title_description{
+        text-align: center;
+        font-size: 30px;
+        height: 90px;
+        position: relative;
+        bottom: 20px;
+    }
+    #svg_bubble{
+        position: relative;
+        bottom: 100px;
+        right: 30px;
+    }
+    #lyric_container{
+        width: 250px;
+        height: 330px;
+        background-color: lightgrey;
+        border-radius: 12px;
+        padding: 10px;
+        position: relative;
+        top: 100px;
+        right: 10px;
+    }
+    #lyric_title{
+        height: 50px;
+        font-size: 20px;
+        text-align: center;
+    }
+    #lyric{
+        width : 250px;
+        height: 270px;
+        overflow: scroll;
+        text-align: center;
+        line-height: 22px;
+        background-color: white;
+        font-size: 13px;
+    }
+    #bar_container{
+        margin-top: -190px;
+        margin-bottom: -20px;
+    }
+    </style>
+
+<!-- <svg width = 300 height = 150 id = "title">
+<svg width = 1200 height = 600 id = "bubble" transform="translate(0,150)">
+<svg id = "bar" transform="translate(0,750)"> -->
+</head>
+<body>
+
+<div id = container>
+
+<div id = "top_container">
+    <p id="artist_name_top"></p>
+    <input id="return_top" type="button" value="HOMEに戻る" onclick="return_top_page()">
+    <form id="search_form" action="artist.html" method="get">
+        <input type="text" name="artist" placeholder="アーティスト名を入力">
+        <input type="submit" value="検索">
+    </form>
+</div>
+
+<div id="main_container">
+    <div id = "rank_container">
+        <p id="rank_title"></p>
+        <div id="rank">
+        </div>
+    </div>
+
+    <div id = "bubble_container">
+        <p id="title_description"></p>
+        <div id="bubble">
+            <svg id="svg_bubble" width="600" height="500"></svg>
+        </div>
+    </div>
+
+    <div id = "lyric_container">
+        <div id="lyric_title">
+        </div>
+        <div id="lyric">歌詞を表示するには、下の棒グラフをクリックしてください
+        </div>
+    </div>
+</div>
+<div id = "bar_container">
+
+  <p id = "cd">CD売上(万枚)</p>
+
+    <div id="bar">
+        <svg width="1200" height="200"></svg>
+    </div>
+
+</div>
+
+</div>
+
+
+
+<script type="text/javascript">
+/*
+  $.ajax({
+  url: 'https://search.yahoo.co.jp/search?p=東京&ei=UTF-8',
+  type: 'GET',
+  success: function(data) {
+      var content = $($(data.responseText).text());
+      $('body').append(content);
+      console.log(content);
+  }
+});
+*/
+var getUrlVars = function(){
+    var vars = {};
+    var param = location.search.substring(1).split('&');
+    for(var i = 0; i < param.length; i++) {
+        var keySearch = param[i].search(/=/);
+        var key = '';
+        if(keySearch != -1) key = param[i].slice(0, keySearch);
+        var val = param[i].slice(param[i].indexOf('=', 0) + 1);
+        if(key != '') vars[key] = decodeURI(val);
+    }
+    return vars;
+}
+var artist_name = getUrlVars().artist;
+var title_name = " ";
+var age = 0;
+var classification;
+d3.json("./datasets/classification.json", function(error, data){
+    classification = data;
+});
+// d3のコード
+//homeボタン
+//アーティスト名を表示
+//var svg_artist_name = d3.select("#artist_name")
+//.select("svg")
+//.append("text")
+//.attr("id","name")
+//.attr("x", 30)
+//.attr("y", 40)
+//.attr("font-size",45)
+//.attr("font-family","sans-serif")
+//.attr("fill","black")
+//.text(artist_name)
+//.on("click",function(d){
+//  age = 0;
+//  if(aa !== undefined && bb !== undefined){
+//    aa.remove();
+//    bb.remove();
+//  }
+//  bubble();
+//});
+function return_top_page(){
+    window.location.href = "index.html";
+}
+function reset_age(){
+  age = 0;
+  if(aa !== undefined && bb !== undefined){
+    aa.remove();
+    bb.remove();
+  }
+  bubble();
+  //console.log("a");
+}
+document.getElementById("artist_name_top").innerHTML = artist_name;
+document.getElementById("artist_name_top").addEventListener("click", function(event){reset_age();});
+//ageを表示
+var svg_age = d3.select("#artist_name").select("svg");
+function age_change(){
+  svg_age.select("#age").remove();
+if(age > 0){
+    document.getElementById("title_description").innerHTML = `「${title_name}」が発売された${age}年の頻出単語`;
+}else{
+    document.getElementById("title_description").innerHTML = `${artist_name}が最も使用した単語`;
+}
+}
+//バブルを表示する
+var svg = d3.select("#bubble").select("svg");
+var width = +svg.attr("width"),
+    height = +svg.attr("height");
+var format = d3.format(",d");
+var color = d3.scaleOrdinal(d3.schemeCategory20c);
+var pack = d3.pack()
+    .size([width, height])
+    .padding(1.5);
+var g2 = svg.append("g").attr("transform","translate(0,0)");
+bubble();
+var node,root;
+function bubble() {
+d3.json("./datasets/wordlist_by_artist_and_year.json", function(error, classes) {
+    if (error) throw error;
+    age_change();
+    //データ読み込み
+    for (var i = 0; i < classes.length; i++) {
+      if(classes[i].artist === artist_name && classes[i].year === age){
+        var tmp = classes[i].worddata;
+        d3.selectAll("tspan").remove();
+        d3.selectAll("circle").remove();
+      }
+    }
+    root = d3.hierarchy({children: tmp})
+        .sum(function(d) {
+          if(age === 0){
+            return d.occurrence;
+          }else{
+            return d.occurence;
+          }})
+        .each(function(d) {
+                d.id = d.data.word;
+                d.package = d.data.class;
+                d.class = d.data.word;
+        });
+    node = g2.selectAll(".node")
+        .data(pack(root).leaves())
+        .enter().append("g")
+        //.attr("class", "node")
+        .attr("transform", function(d) {return "translate(" + d.x + "," + d.y + ")"; });
+    node.append("circle")
+        .attr("id", function(d) { return d.id; })
+        .attr("r", function(d) {return d.r; })
+        .style("fill", function(d) { return color_selection(d.id); })
+        .on("click",function(d){ranking(d.id);
+          //aa.remove();bb.remove();
+        });
+    node.append("clipPath")
+        .attr("id", function(d) { return "clip-" + d.id; })
+        .append("use")
+        .attr("xlink:href", function(d) { return "#" + d.id; });
+    var r;
+    node.append("text")
+        .attr("clip-path", function(d) {return "url(#clip-" + d.id + ")"; })
+        .attr("font-size",function(d){return fontsize(d.r/1,d.id);})
+        .selectAll("tspan")
+        .data(function(d) { return d.class.split(/(?=[A-Z][^A-Z])/g); })
+        .enter().append("tspan")
+        .attr('text-anchor',"middle")
+        .attr("x", 0)
+        .attr("y", function(d, i, nodes) {
+          if(charcount(d) === 1){
+            if(d === "I"){
+              return 40 + (i - nodes.length / 2 - 0.5) * 10;
+            }
+            return 30 + (i - nodes.length / 2 - 0.5) * 10;
+          }else{
+            return 25 + (i - nodes.length / 2 - 0.5) * 10;
+          }})
+        .text(function(d) { return d; })
+        .on("click",function(d){ranking(d);
+          if(aa !== undefined && bb !== undefined){aa.remove(); bb.remove();}})
+    node.append("title")
+        .text(function(d) { return d.id + format(d.value); });
+    function fontsize(r,word){
+      if(charcount(word) === 1){
+        r = r - 20;
+      }
+      if(charcount(word) === 2){
+        r = r - 10;
+      }
+      return 2*r / charcount(word);
+    }
+    //x * length < 2*r narayoi
+    //x < 2*r / length
+    /*
+    function highlight(package){
+        svg.selectAll("circle").filter(function(d){
+          return d.package === package;}).style("fill", "white");
+        svg.selectAll("text").filter(function(d){return d.package === package;}).style("fill","white");
+    }
+    svg.selectAll("circle").on("click", function(d){package = d.package; return highlight(package)});
+    */
+});
+}
+function color_selection(word, opacity){
+//    0 形式
+//    1 人称
+//    2 ポジティブ
+//    3 ネガティブ
+//    4 身体、人
+//    5 その他
+//    6 恋愛
+//    7 自然
+//    8 感嘆詞
+    var number;
+    if (classification[word] !== undefined){
+        number = classification[word];
+    }else{
+        number = 9;
+    }
+    switch (number){
+        case 0:
+            if (opacity !== undefined) return `rgba(238,232,170,${opacity})`;
+            else return "palegoldenrod";
+        case 1:
+            if (opacity !== undefined) return `rgba(174,224,230,${opacity})`;
+            else return "powderblue";
+        case 2:
+            if (opacity !== undefined) return `rgba(225,69,0,${opacity})`;
+            else return "orangered";
+        case 3:
+            if (opacity !== undefined) return `rgba(65,105,225,${opacity})`;
+            else return "royalblue";
+        case 4:
+            if (opacity !== undefined) return `rgba(224,164,96,${opacity})`;
+            else return "sandybrown";
+        case 6:
+            if (opacity !== undefined) return `rgba(225,192,203,${opacity})`;
+            else return "pink";
+        case 7:
+            if (opacity !== undefined) return `rgba(124,252,0,${opacity})`;
+            else return "lawngreen";
+        case 8:
+            if (opacity !== undefined) return `rgba(225,225,0,${opacity})`;
+            else return "yellow";
+    }
+    if (opacity !== undefined) return `rgba(192,192,192,${opacity})`;
+    return "silver";
+}
+//棒グラフを表示する
+var svg2 = d3.select("#bar").select("svg"),
+    width = +svg2.attr("width"),
+    height = +svg2.attr("height");
+//svg2.append("text").text("CD売上(万枚)").attr("transform", "translate(60,30)");
+var x = d3.scaleBand().rangeRound([0, width-100]).padding(0.1),
+    y = d3.scaleLinear().rangeRound([height, 50]);
+var g = svg2.append("g")
+    .attr("transform", "translate(" + 50 + "," + -30 + ")");
+    d3.json("./datasets/album_sales_processed.json", function(error, tmpdata) {
+      if (error) throw error;
+
+      var data;
+
+      for (var i = 0; i < tmpdata.length; i++) {
+        if(tmpdata[i].artist === artist_name){
+            data = tmpdata[i].album_data;
+          }
+      }
+
+    var maxsales = 0;
+    var s = [];
+
+    for (var j = data.length - 1; j >= 0; j--) {
+      if(data[j].age/1 > 1970){
+        if(s[data[j].age/1 - 1971] === undefined){
+          s[data[j].age/1 - 1971] = data[j].sales/10000;
+        }
+        else{
+          s[data[j].age/1 - 1971] += data[j].sales/10000
+        }
+      }
+      else{
+        data.splice(j,1);
+      }
+    }
+
+    function object_array_sort(d,key,order){
+      //デフォは降順(DESC)
+      var num_a = -1;
+      var num_b = 1;
+
+      if(order === 'asc'){//指定があれば昇順(ASC)
+        num_a = 1;
+        num_b = -1;
+      }
+
+     var da = d.sort(function(a, b){
+        var x = a[key];
+        var y = b[key];
+        if (x > y) return num_a;
+        if (x < y) return num_b;
+        return 0;
+      });
+
+     return da; // ソート後の配列を返す
+    }
+
+    var td = data.slice(0, data.length/2);
+
+    var sorted_data = object_array_sort(td,"age","asc");
+    var lc;
+
+    for(var k = 0; k < sorted_data.length - 1; k++){
+      var dif = sorted_data[k+1].age/1 - sorted_data[k].age/1 - 1
+      if(dif >= 1){
+        lc = sorted_data[k].age
+          for(var l=0; l < dif; l++){
+            var addData = { age : lc/1 + l + 1, sales : 0 };
+            //console.log(addData);
+            //console.log(k,l);
+            //console.log(sorted_data);
+            sorted_data.splice(k+1,0,addData);
+            k++;
+          }
+        }
+    }
+
+     for(var j=0; j<s.length; j++){
+       if(s[j] !== undefined){
+         maxsales = Math.max(maxsales,s[j]);
+       }
+     }
+
+    //棒グラフ補完、文字大きさ補正（サザンでやれ）、円の大きさハイライト、棒グラフの文字位置
+    //tube 1994
+
+      //console.log(data);
+      x.domain(sorted_data.map(function(d) {return d.age/1; }));
+      y.domain([0, maxsales/2 ]);
+
+      g.append("g")
+          .attr("class", "axis axis--x")
+          .attr("transform", "translate(0," + (height/1) + ")")
+          .call(d3.axisBottom(x));
+          /*
+          .on("click",function(d){
+            console.log(x);
+            age = data.age/1;
+            bubble();
+          });*/
+
+      g.append("g")
+          .attr("class", "axis axis--y")
+          .call(d3.axisLeft(y).ticks(5));
+
+      var sumofyear,year;
+
+      g.selectAll(".bar")
+        .data(sorted_data)
+        .enter().append("rect")
+          .attr("class", "bar")
+          .attr("x", function(d) {return x(d.age/1); })
+          .attr("y", function(d) {
+            if(year !== d.age/1){
+              sumofyear = y(d.sales/10000);
+            }
+            else{
+              sumofyear -= height - y(d.sales/10000);
+            }
+            year = d.age/1;
+            return sumofyear; })
+          .attr("width", x.bandwidth())
+          .attr("height", function(d) {return height - y(d.sales/10000); })
+          .on("mouseover",function(d) {
+            var year = x(d.age/1) ;
+            var sales =  sumofyear - 100;
+            pref_details.text(remove_amp(d.title))
+                        .attr("x",year)
+                        .attr("y",sales);
+          })
+          .on("mouseout",function(d){
+            pref_details.text(" ");
+          })
+          .on("click",function(d){
+            age = d.age/1;
+            if(aa !== undefined && bb !== undefined){
+              aa.remove();
+              bb.remove();
+            }
+            if(ly !== undefined){
+              ly.remove();
+            }
+            if(ti !== undefined){
+              ti.remove();
+            }
+            title_name = d.title;
+            bubble();
+            lyric();
+          });
+
+      var pref_details = svg2.append("text")
+                            //.attr("x",50)
+                            //.attr("y",500)
+                            .attr("font-size", 20)
+                            .attr("stroke","none")
+                            .attr("fill","black");
+
+    });
+function remove_amp(word){
+  var temp;
+  var result = [];
+  temp = word.split("&amp;");
+  if(temp.length > 1){
+    for (var i = 0; i < temp.length; i++) {
+      if(i !== temp.length - 1){
+        result += temp[i] + "& ";
+      }
+      else{
+        result += temp[i];
+      }
+    }
+    return result;
+  }
+  return word;
+}
+var svg4 = d3.select("#rank_container")
+.select("svg");
+var isload = 0;
+var aa,bb;
+function ranking(word) {
+d3.json("./datasets/artistlist_by_word.json", function(error, classes) {
+    if (error) throw error;
+    var tmp,whole_oc;
+    //データ読み込み
+    for (var i = 0; i < classes.length; i++) {
+      if(classes[i].word === word){
+        whole_oc = classes[i].whole_occurrence;
+        tmp = classes[i].artist_list;
+      }
+    }
+//    if(tmp === undefined){throw error;};
+    var y = 80;
+    var is_first = 1;
+    var j = 0;
+    //console.log(tmp);
+    // 初期化
+    var element = document.getElementById("rank")
+    while (element.firstChild) element.removeChild(element.firstChild);
+    for (var i = 0; i < tmp.length; i++){
+        var aTag = document.createElement("a");
+        aTag.href = "artist.html?artist=" + tmp[i].artist;
+        aTag.innerHTML = `${i + 1}位 ${tmp[i].artist} (${tmp[i].occurrence}回)`;
+        aTag.setAttribute("class", "artist-btn");
+        aTag.setAttribute("artist-name", tmp[i].artist);
+        aTag.style.backgroundColor = color_selection(word);
+        document.getElementById("rank").appendChild(aTag);
+    }
+    document.getElementById("rank_title").innerHTML = `「${word}」歴代総使用ランキング`;
+    document.getElementById("rank_container").style.backgroundColor = color_selection(word, 0.2)
+});
+}
+var svg5 = d3.select("#lyric");
+//.select("svg")
+var ly,ti;
+function lyric() {
+d3.json("./datasets/lyric_from_single_title.json", function(error, lyricdata) {
+    if (error) throw error;
+    var t = lyricdata[artist_name][title_name].lyric_body;
+    title_name = lyricdata[artist_name][title_name].true_title;
+    var s = [];
+    var y = 0;
+    var splited = t.split(" ");
+    var result = "";
+    var temp = [];
+    var nexttemp = [];
+      for(var j=0; j<splited.length; j++){
+        temp += splited[j] + " ";
+        nexttemp = temp + splited[j+1] + " ";
+        if(charcount(nexttemp) >= 34){
+          result += temp + "<br/>";
+          temp = [];
+        }
+      }
+   ti = d3.select("#lyric_title")
+      .append("text")
+      .attr("font-size",20)
+      .attr("fill","black")
+      .text("「" + title_name + "」の歌詞");
+  target = document.getElementById("lyric");
+  target.innerHTML = result;
+/*
+    ly = svg5//.selectAll("text.rank")
+      //.data(s)
+      //.enter()
+      .append("text")
+      .attr("x", 0)
+      .attr("y", 30)
+      .attr("font-size",15)
+      .attr("fill","black")
+      .text(t.lyric_body);
+      */
+      //ti.classed("ly",true);
+      //ly.classed("ly",true);
+});
+}
+function charcount (str) {
+  len = 0;
+  str = escape(str);
+  for (i=0;i<str.length;i++,len++) {
+    if (str.charAt(i) == "%") {
+      if (str.charAt(++i) == "u") {
+        i += 3;
+        len++;
+      }
+      i++;
+    }
+  }
+  return len;
+}
+</script>
+</body></html>
